@@ -1,0 +1,13 @@
+[package]
+name = "binsig"
+version = "0.1.0"
+authors = ["Mason Reed <msr@emesare.com>"]
+edition = "2021"
+readme = "README.md"
+keywords = ["binary", "signature", "scan", "binsig"]
+repository = "https://github.com/emesare/binsig/"
+license = "MIT"
+
+[dependencies]
+itertools = "0.11"
+thiserror = "1.0"
