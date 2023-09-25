@@ -1,6 +1,4 @@
-#![feature(slice_take)]
-
-use std::{iter::Enumerate, slice::Windows};
+use std::{iter::Enumerate, mem::size_of, slice::Windows};
 
 use itertools::Itertools;
 
@@ -87,19 +85,46 @@ impl Pattern {
         Scanner::new(self.clone(), bytes)
     }
 
-    pub fn is_matching(&self, mut bytes: &[u8]) -> bool {
+    pub fn is_matching<'a>(&self, mut bytes: &'a [u8]) -> bool {
+        let take_forward = |b: &mut &'a [u8], n: usize| -> &'a [u8] {
+            let (taken, untouched) = b.split_at(n);
+            *b = untouched;
+            taken
+        };
+
         self.atoms.iter().all(|a| match a {
-            Atom::LongLong(val) => bytes
-                .take(..8)
-                .is_some_and(|x| u64::from_ne_bytes(x.try_into().unwrap()) == *val),
-            Atom::Long(val) => bytes
-                .take(..4)
-                .is_some_and(|x| u32::from_ne_bytes(x.try_into().unwrap()) == *val),
-            Atom::Short(val) => bytes
-                .take(..2)
-                .is_some_and(|x| u16::from_ne_bytes(x.try_into().unwrap()) == *val),
-            Atom::Byte(val) => bytes.take(..1).is_some_and(|x| x[0] == *val),
-            Atom::Mask(len) => bytes.take(..*len).is_some(),
+            Atom::LongLong(val) => {
+                u64::from_ne_bytes(
+                    take_forward(&mut bytes, size_of::<u64>())
+                        .try_into()
+                        .unwrap(),
+                ) == *val
+            }
+            Atom::Long(val) => {
+                u32::from_ne_bytes(
+                    take_forward(&mut bytes, size_of::<u32>())
+                        .try_into()
+                        .unwrap(),
+                ) == *val
+            }
+            Atom::Short(val) => {
+                u16::from_ne_bytes(
+                    take_forward(&mut bytes, size_of::<u16>())
+                        .try_into()
+                        .unwrap(),
+                ) == *val
+            }
+            Atom::Byte(val) => {
+                u8::from_ne_bytes(
+                    take_forward(&mut bytes, size_of::<u8>())
+                        .try_into()
+                        .unwrap(),
+                ) == *val
+            }
+            Atom::Mask(len) => {
+                take_forward(&mut bytes, *len);
+                true
+            }
         })
     }
 
@@ -307,6 +332,13 @@ mod tests {
         assert_eq!(
             vec![0, 5, 8],
             Pattern::new(vec![Atom::Byte(0x11), Atom::Mask(1), Atom::Byte(0x33)])
+                .scan(haystack)
+                .map(|t| t.0)
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            vec![0],
+            Pattern::new(vec![Atom::Long(0x332211)])
                 .scan(haystack)
                 .map(|t| t.0)
                 .collect::<Vec<_>>()
