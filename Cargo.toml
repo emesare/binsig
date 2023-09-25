@@ -5,6 +5,7 @@ authors = ["Mason Reed <msr@emesare.com>"]
 edition = "2021"
 readme = "README.md"
 keywords = ["binary", "signature", "scan", "binsig"]
+description = "Provides an easy way to deal with searching for byte patterns using partial byte signatures"
 repository = "https://github.com/emesare/binsig/"
 license = "MIT"
 
